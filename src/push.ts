@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import {createBundle, getRefName} from './helpers'
+import {createBundle, getRefName, humanFileSize} from './helpers'
 import {create, UploadOptions} from '@actions/artifact'
 
 export const push = async (): Promise<void> => {
@@ -27,6 +27,10 @@ export const push = async (): Promise<void> => {
   } else {
     outcomeBundle = await createBundle(branch, path)
   }
+
+  core.debug(
+    `First Bundle: ${humanFileSize(outcomeBundle.bundles[0].totalBytes)}`
+  )
 
   // For the moment lets bundle and stringify the output..
   core.debug(JSON.stringify(outcomeBundle))
