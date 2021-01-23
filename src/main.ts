@@ -10,8 +10,6 @@ async function run(): Promise<void> {
       core.debug(context.eventName)
     }
 
-    return core.error('error')
-
     // Fail for users trying to use this action outside of a pull request workflow..
     if (!context.payload.pull_request) {
       return core.error(
