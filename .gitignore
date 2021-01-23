@@ -101,4 +101,4 @@ lib/**/*
 .idea
 build
 ./build
-./build.json
+build.json
