@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import {createBundle, getRefName} from './helpers'
+import {createBundle, getRefName, humanFileSize} from './helpers'
 import {create, UploadOptions} from '@actions/artifact'
 import {ExploreResult} from 'source-map-explorer/lib/types'
 
@@ -40,12 +40,17 @@ export const push = async (): Promise<void> => {
   // For the moment lets bundle and stringify the output..
   core.debug(JSON.stringify(outcomeBundle))
 
+  core.debug(
+    `First Bundle Size: ${humanFileSize(outcomeBundle.bundles[0].totalBytes)}`
+  )
+
   // Create an artifact client to save current log
   const artifactClient = create()
 
   const options: UploadOptions = {
     continueOnError: false
   }
+
   try {
     // Save a current log of what was built
     const uploadResponse = await artifactClient.uploadArtifact(

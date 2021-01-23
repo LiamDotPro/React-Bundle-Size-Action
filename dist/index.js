@@ -3,12 +3,42 @@ require('./sourcemap-register.js');module.exports =
 /******/ 	var __webpack_modules__ = ({
 
 /***/ 5008:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getRefName = void 0;
+exports.createBundle = exports.getRefName = exports.humanFileSize = void 0;
+const source_map_explorer_1 = __webpack_require__(7965);
+const core = __importStar(__webpack_require__(2186));
 /**
  * Format bytes as human-readable text.
  *
@@ -36,6 +66,7 @@ const humanFileSize = (bytes, si = false, dp = 1) => {
         u < units.length - 1);
     return `${bytes.toFixed(dp)} ${units[u]}`;
 };
+exports.humanFileSize = humanFileSize;
 /**
  * Get the ref name from the ref string.
  * @param {string} ref
@@ -45,6 +76,22 @@ const getRefName = (ref) => {
     return ref ? ref.split('/').slice(2).join('/') : null;
 };
 exports.getRefName = getRefName;
+const createBundle = (branch, path = './build/static') => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const createdBundle = yield source_map_explorer_1.explore(`${path}/**/*.(js|css)`, {
+            output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
+        });
+        if (createdBundle.bundles.length === 0) {
+            core.error(`Couldn't parse any assets from the build, or build wasn't found..`);
+        }
+        return createdBundle;
+    }
+    catch (e) {
+        core.error(e);
+        return false;
+    }
+});
+exports.createBundle = createBundle;
 
 
 /***/ }),
@@ -84,82 +131,227 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__webpack_require__(2186));
-const artifact_1 = __webpack_require__(2605);
 const github_1 = __webpack_require__(5438);
-const helpers_1 = __webpack_require__(5008);
-const source_map_explorer_1 = __webpack_require__(7965);
+const pr_1 = __webpack_require__(515);
+const push_1 = __webpack_require__(6700);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            if (github_1.context.eventName) {
-                core.debug(github_1.context.eventName);
+            /**
+             * Upon entry we need to figure out if were running in a push or pull request mode.
+             *
+             * Push: When pushing were presuming you accepted a pull request onto X Branch.
+             * Pull Request: When making a pull request were presuming you also want stats against what changed in the bundle size..
+             */
+            if (github_1.context.eventName === 'push') {
+                core.debug(`👷 Push event detected, logging bundle results to console!`);
+                return push_1.push();
             }
-            // Fail for users trying to use this action outside of a pull request workflow..
-            if (!github_1.context.payload.pull_request) {
-                return core.error('This action is designed to be run against a pull request, make sure your workflow is valid..');
-            }
-            if (!process.env.GITHUB_REF) {
-                return core.error('The branch could not be detected, are we running in a CI?');
-            }
-            // Find the branch were currently on
-            const branch = helpers_1.getRefName(process.env.GITHUB_REF);
-            if (!branch) {
-                return core.error('The branch could name not be detected, does our branch name contain invalid chars?');
-            }
-            // Read in an input for the path in the case the bundle isn't collected directly in the root.
-            const path = core.getInput('path');
-            // No path has been specified, lets presume the build is located directly in the root.
-            if (!path) {
-                const outcomeBundle = yield source_map_explorer_1.explore('./build/static/**/*.(js|css)', {
-                    output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
-                });
-                if (outcomeBundle.bundles.length === 0) {
-                    return core.error('The build output folder did not contain any files');
-                }
-            }
-            else {
-                const outcomeBundle = yield source_map_explorer_1.explore(`${path}/build/static/**/*.(js|css)`, {
-                    output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
-                });
-                if (outcomeBundle.bundles.length === 0) {
-                    return core.error('The build output folder did not contain any files');
-                }
-            }
-            // Create an artifact client to save current log
-            const artifactClient = artifact_1.create();
-            const options = {
-                continueOnError: false
-            };
-            // Save a current log of what was built
-            const uploadResponse = yield artifactClient.uploadArtifact(branch, [`./${branch}-react-bundle-logs.json`], './', options);
-            if (uploadResponse) {
-                core.debug('⭐ A react bundle log for this build has been saved using your branch name!');
-            }
-            // Try and find a log to compare it too using the pull request destination
-            // get pull request target name:
-            const targetBranchName = helpers_1.getRefName(github_1.context.payload.pull_request.head.ref);
-            if (!targetBranchName) {
-                return core.error('The branch could name not be detected, does the target branch name contain invalid chars?');
-            }
-            try {
-                const foundArtifact = yield artifactClient.downloadArtifact(`./${targetBranchName}-react-bundle-logs.json`);
-                if (!foundArtifact) {
-                    // We couldn't find a corresponding branch name, this may mean that the target branch has never previously been built..
-                    // At this point we can just set the output.
-                    return core.debug('⭐ Set the bundle size without specifying what it was against!');
-                }
-            }
-            catch (e) {
-                core.debug('Trying to find an artifact threw an error..');
-                return core.debug('⭐ Set the bundle size without specifying what it was against!');
+            if (github_1.context.eventName === 'pull_request') {
+                core.debug(`👌 Pull Request event detected, logging bundle results to pull request!`);
+                return pr_1.pr();
             }
         }
-        catch (error) {
-            core.setFailed(error.message);
+        catch (e) {
+            core.debug('Something went wrong while trying to assign this kind of action..');
         }
     });
 }
 run();
+
+
+/***/ }),
+
+/***/ 515:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.pr = void 0;
+const github_1 = __webpack_require__(5438);
+const core = __importStar(__webpack_require__(2186));
+const helpers_1 = __webpack_require__(5008);
+const source_map_explorer_1 = __webpack_require__(7965);
+const artifact_1 = __webpack_require__(2605);
+const pr = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        if (!process.env.GITHUB_REF) {
+            return core.error('The branch could not be detected, are we running in a CI?');
+        }
+        // Find the branch were currently on
+        const branch = helpers_1.getRefName(process.env.GITHUB_REF);
+        if (!branch) {
+            return core.error('The branch could name not be detected, does our branch name contain invalid chars?');
+        }
+        // Read in an input for the path in the case the bundle isn't collected directly in the root.
+        const path = core.getInput('path');
+        // No path has been specified, lets presume the build is located directly in the root.
+        if (!path) {
+            const outcomeBundle = yield source_map_explorer_1.explore('./build/static/**/*.(js|css)', {
+                output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
+            });
+            if (outcomeBundle.bundles.length === 0) {
+                return core.error('The build output folder did not contain any files');
+            }
+        }
+        else {
+            const outcomeBundle = yield source_map_explorer_1.explore(`${path}/build/static/**/*.(js|css)`, {
+                output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
+            });
+            if (outcomeBundle.bundles.length === 0) {
+                return core.error('The build output folder did not contain any files');
+            }
+        }
+        // Create an artifact client to save current log
+        const artifactClient = artifact_1.create();
+        const options = {
+            continueOnError: false
+        };
+        // Save a current log of what was built
+        const uploadResponse = yield artifactClient.uploadArtifact(branch, [`./${branch}-react-bundle-logs.json`], './', options);
+        if (uploadResponse) {
+            core.debug('⭐ A react bundle log for this build has been saved using your branch name!');
+        }
+        // Try and find a log to compare it too using the pull request destination
+        // get pull request target name:
+        const targetBranchName = helpers_1.getRefName((_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.ref);
+        if (!targetBranchName) {
+            return core.error('The branch could name not be detected, does the target branch name contain invalid chars?');
+        }
+        try {
+            const foundArtifact = yield artifactClient.downloadArtifact(`./${targetBranchName}-react-bundle-logs.json`);
+            if (!foundArtifact) {
+                // We couldn't find a corresponding branch name, this may mean that the target branch has never previously been built..
+                // At this point we can just set the output.
+                return core.debug('⭐ Set the bundle size without specifying what it was against!');
+            }
+        }
+        catch (e) {
+            core.debug('Trying to find an artifact threw an error..');
+            return core.debug('⭐ Set the bundle size without specifying what it was against!');
+        }
+    }
+    catch (error) {
+        core.setFailed(error.message);
+    }
+});
+exports.pr = pr;
+
+
+/***/ }),
+
+/***/ 6700:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.push = void 0;
+const core = __importStar(__webpack_require__(2186));
+const helpers_1 = __webpack_require__(5008);
+const artifact_1 = __webpack_require__(2605);
+const push = () => __awaiter(void 0, void 0, void 0, function* () {
+    if (!process.env.GITHUB_REF) {
+        return core.error('The branch could not be detected, are we running in a CI?');
+    }
+    // Find the branch were currently on
+    const branch = helpers_1.getRefName(process.env.GITHUB_REF);
+    core.debug(`found the branch: "${branch}" Using this as our file save name.`);
+    if (!branch) {
+        return core.error(`Couldn't extract the branch name`);
+    }
+    // Read in an input for the path in the case the bundle isn't collected directly in the root.
+    const path = core.getInput('path');
+    core.debug(`Read in the following path: "${path}"`);
+    let outcomeBundle;
+    // No path has been specified, lets presume the build is located directly in the root.
+    if (!path) {
+        outcomeBundle = yield helpers_1.createBundle(branch);
+    }
+    else {
+        outcomeBundle = yield helpers_1.createBundle(branch, path);
+    }
+    if (!outcomeBundle) {
+        return core.error(`Couldn't read in the bundle..`);
+    }
+    // For the moment lets bundle and stringify the output..
+    core.debug(JSON.stringify(outcomeBundle));
+    core.debug(`First Bundle Size: ${helpers_1.humanFileSize(outcomeBundle.bundles[0].totalBytes)}`);
+    // Create an artifact client to save current log
+    const artifactClient = artifact_1.create();
+    const options = {
+        continueOnError: false
+    };
+    try {
+        // Save a current log of what was built
+        const uploadResponse = yield artifactClient.uploadArtifact(branch, [`./${branch}-react-bundle-logs.json`], './', options);
+        core.debug('⭐ A react bundle log for this build has been saved using your branch name!');
+        core.debug(JSON.stringify(uploadResponse));
+    }
+    catch (e) {
+        core.debug(e);
+        return core.error(`Something went wrong trying to save the artifact!`);
+    }
+});
+exports.push = push;
 
 
 /***/ }),
