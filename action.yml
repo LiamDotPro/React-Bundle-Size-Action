@@ -1,11 +1,11 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'React Bundle Size'
+description: 'Create a report of your bundle size'
+author: 'Liam Read'
 inputs:
-  milliseconds: # change this
-    required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+  path:
+    required: false
+    description: 'The path to your react build folder'
+    default: './build'
 runs:
   using: 'node12'
   main: 'dist/index.js'
