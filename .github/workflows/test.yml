@@ -14,3 +14,5 @@ jobs:
       - uses: LiamDotPro/React-Bundle-Size-Action@0.0.2
         with:
           path: './build/static'
+      - run:
+          ls

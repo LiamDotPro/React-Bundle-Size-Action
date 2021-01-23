@@ -50,9 +50,13 @@ export const createBundle = async (
   path = './build/static'
 ): Promise<ExploreResult | false> => {
   try {
-    const createdBundle = await explore(`${path}/**/*.(js|css)`, {
-      output: {format: 'json', filename: `${branch}-react-bundle-logs.json`}
-    })
+    core.debug(`concatenated path: ${path}/**/*.js`)
+    const createdBundle = await explore(
+      [`${path}/**/*.js`, `${path}/**/*.css`],
+      {
+        output: {format: 'json', filename: `${branch}-react-bundle-logs.json`}
+      }
+    )
 
     if (createdBundle.bundles.length === 0) {
       core.error(
