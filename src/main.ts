@@ -7,7 +7,7 @@ import {explore} from 'source-map-explorer'
 async function run(): Promise<void> {
   try {
     if (context.eventName) {
-      console.log(context.eventName)
+      core.debug(context.eventName)
     }
 
     return core.error('error')
