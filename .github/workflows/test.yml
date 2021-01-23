@@ -12,3 +12,5 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: LiamDotPro/React-Bundle-Size-Action@0.0.2
+        with:
+          path: './build/static'

@@ -5,7 +5,7 @@ inputs:
   path:
     required: false
     description: 'The path to your react build folder'
-    default: './build'
+    default: './build/static'
 runs:
   using: 'node12'
   main: 'dist/index.js'
