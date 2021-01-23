@@ -1,3 +1,7 @@
+import {explore} from 'source-map-explorer'
+import {ExploreResult} from 'source-map-explorer/lib/types'
+import * as core from '@actions/core'
+
 /**
  * Format bytes as human-readable text.
  *
@@ -39,4 +43,21 @@ const humanFileSize = (bytes: number, si = false, dp = 1): string => {
  */
 export const getRefName = (ref: string): string | null => {
   return ref ? ref.split('/').slice(2).join('/') : null
+}
+
+export const createBundle = async (
+  branch: string,
+  path = './build/static'
+): Promise<ExploreResult> => {
+  const createdBundle = await explore(`${path}/**/*.(js|css)`, {
+    output: {format: 'json', filename: `${branch}-react-bundle-logs.json`}
+  })
+
+  if (createdBundle.bundles.length === 0) {
+    core.error(
+      `Couldn't parse any assets from the build, or build wasn't found..`
+    )
+  }
+
+  return createdBundle
 }
