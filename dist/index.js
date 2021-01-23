@@ -78,7 +78,8 @@ const getRefName = (ref) => {
 exports.getRefName = getRefName;
 const createBundle = (branch, path = './build/static') => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const createdBundle = yield source_map_explorer_1.explore(`${path}/**/*.(js|css)`, {
+        core.debug(`concatenated path: ${path}/**/*.js`);
+        const createdBundle = yield source_map_explorer_1.explore([`${path}/**/*.js`, `${path}/**/*.css`], {
             output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
         });
         if (createdBundle.bundles.length === 0) {
