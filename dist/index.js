@@ -145,11 +145,11 @@ function run() {
              * Pull Request: When making a pull request were presuming you also want stats against what changed in the bundle size..
              */
             if (github_1.context.eventName === 'push') {
-                core.debug(`👷 Push event detected, logging bundle results to console!`);
+                core.info(`👷 Push event detected, logging bundle results to console!`);
                 return push_1.push();
             }
             if (github_1.context.eventName === 'pull_request') {
-                core.debug(`👌 Pull Request event detected, logging bundle results to pull request!`);
+                core.info(`👌 Pull Request event detected, logging bundle results to pull request!`);
                 return pr_1.pr();
             }
         }
