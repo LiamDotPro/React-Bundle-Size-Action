@@ -48,16 +48,21 @@ export const getRefName = (ref: string): string | null => {
 export const createBundle = async (
   branch: string,
   path = './build/static'
-): Promise<ExploreResult> => {
-  const createdBundle = await explore(`${path}/**/*.(js|css)`, {
-    output: {format: 'json', filename: `${branch}-react-bundle-logs.json`}
-  })
+): Promise<ExploreResult | false> => {
+  try {
+    const createdBundle = await explore(`${path}/**/*.(js|css)`, {
+      output: {format: 'json', filename: `${branch}-react-bundle-logs.json`}
+    })
 
-  if (createdBundle.bundles.length === 0) {
-    core.error(
-      `Couldn't parse any assets from the build, or build wasn't found..`
-    )
+    if (createdBundle.bundles.length === 0) {
+      core.error(
+        `Couldn't parse any assets from the build, or build wasn't found..`
+      )
+    }
+
+    return createdBundle
+  } catch (e) {
+    core.error(e)
+    return false
   }
-
-  return createdBundle
 }
