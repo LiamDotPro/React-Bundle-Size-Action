@@ -12,12 +12,12 @@ async function run(): Promise<void> {
      * Pull Request: When making a pull request were presuming you also want stats against what changed in the bundle size..
      */
     if (context.eventName === 'push') {
-      core.debug(`👷 Push event detected, logging bundle results to console!`)
+      core.info(`👷 Push event detected, logging bundle results to console!`)
       return push()
     }
 
     if (context.eventName === 'pull_request') {
-      core.debug(
+      core.info(
         `👌 Pull Request event detected, logging bundle results to pull request!`
       )
       return pr()
