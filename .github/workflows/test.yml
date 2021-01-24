@@ -11,5 +11,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: LiamDotPro/React-Bundle-Size-Action@0.0.10
+      - uses: LiamDotPro/React-Bundle-Size-Action@0.0.11
       - run: ls
