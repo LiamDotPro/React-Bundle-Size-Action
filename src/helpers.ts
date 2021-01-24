@@ -148,26 +148,21 @@ export const createStats = (res: ExploreResult): BundleStats => {
 }
 
 export const printTextStats = (stats: BundleStats): void => {
-  core.info(`
-    ✅ Your Bundle has been analyzed and the following has been logged: \n
-  `)
-  core.info(`🔥Total Bytes: ${stats.totalBytes}\n`)
-  core.info(`
-    Javascript Resources (Total Bytes - ${stats.jsBundlesAndSizes.totalSize}): \n
-  `)
+  core.info(
+    `✅ Your Bundle has been analyzed and the following has been logged:
+    
+    🔥Total Bytes: ${stats.totalBytes}
+    
+    Javascript Resources (Total Bytes - ${stats.jsBundlesAndSizes.totalSize}):`
+  )
   for (const jsStats of stats.jsBundlesAndSizes.bundleLogs) {
-    core.info(`
-  ${jsStats}
-  `)
+    core.info(jsStats)
   }
-  core.info('\n')
 
-  core.info(`
-    Css Resources (Total Bytes - ${stats.cssBundlesAndSizes.totalSize}): \n
-  `)
+  core.info(
+    `Css Resources (Total Bytes - ${stats.cssBundlesAndSizes.totalSize}):`
+  )
   for (const cssStats of stats.cssBundlesAndSizes.bundleLogs) {
-    core.info(`
-  ${cssStats}
-  `)
+    core.info(cssStats)
   }
 }
