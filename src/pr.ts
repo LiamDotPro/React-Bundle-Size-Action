@@ -17,9 +17,7 @@ export const pr = async (): Promise<void> => {
   try {
     // Try and find a log to compare it too using the pull request destination
     // get pull request target name:
-    const targetBranchName = getRefName(context.payload.pull_request?.head.ref)
-
-    core.info(context.payload.pull_request?.head.ref)
+    const targetBranchName = context.payload.pull_request?.base.ref
 
     if (!targetBranchName) {
       return core.error(
