@@ -134,12 +134,12 @@ interface BundleStats {
 export const createStats = (res: ExploreResult): BundleStats => {
   return {
     totalBytes: getTotalBytes(res),
-    jsBundlesAndSizes: getAllOfBundleTypes(
+    cssBundlesAndSizes: getAllOfBundleTypes(
       res,
       SupportedFileEndings.CSS,
       'CSS Bundles'
     ),
-    cssBundlesAndSizes: getAllOfBundleTypes(
+    jsBundlesAndSizes: getAllOfBundleTypes(
       res,
       SupportedFileEndings.JS,
       'Javascript Bundles'
@@ -149,12 +149,16 @@ export const createStats = (res: ExploreResult): BundleStats => {
 
 export const printTextStats = (stats: BundleStats): void => {
   core.info(
-    `✅ Your Bundle has been analyzed and the following has been logged:
-    
-    🔥Total Bytes: ${stats.totalBytes}
-    
-    Javascript Resources (Total Bytes - ${stats.jsBundlesAndSizes.totalSize}):`
+    '✅ Your Bundle has been analyzed and the following has been logged:'
   )
+  core.info('🔥Total Bytes: ' + stats.totalBytes)
+  core.info('')
+  core.info(
+    'Javascript Resources (Total Bytes - ' +
+      stats.jsBundlesAndSizes.totalSize +
+      ' )'
+  )
+
   for (const jsStats of stats.jsBundlesAndSizes.bundleLogs) {
     core.info(jsStats)
   }

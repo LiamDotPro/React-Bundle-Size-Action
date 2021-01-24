@@ -11,6 +11,6 @@ test('Should build analytics from a build command', async () => {
   )
 
   expect(result.totalBytes).toBe('275.4 kB')
-  expect(result.jsBundlesAndSizes.totalSize).toBe('21.3 kB')
+  expect(result.jsBundlesAndSizes.totalSize).toBe('254.1 kB')
   expect(result.jsBundlesAndSizes.bundleLogs.length).toBeGreaterThan(1)
 })

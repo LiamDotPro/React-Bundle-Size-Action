@@ -145,32 +145,23 @@ const getAllOfBundleTypes = (res, endsWith, title) => {
 const createStats = (res) => {
     return {
         totalBytes: getTotalBytes(res),
-        jsBundlesAndSizes: getAllOfBundleTypes(res, enums_1.SupportedFileEndings.CSS, 'CSS Bundles'),
-        cssBundlesAndSizes: getAllOfBundleTypes(res, enums_1.SupportedFileEndings.JS, 'Javascript Bundles')
+        cssBundlesAndSizes: getAllOfBundleTypes(res, enums_1.SupportedFileEndings.CSS, 'CSS Bundles'),
+        jsBundlesAndSizes: getAllOfBundleTypes(res, enums_1.SupportedFileEndings.JS, 'Javascript Bundles')
     };
 };
 exports.createStats = createStats;
 const printTextStats = (stats) => {
-    core.info(`
-    ✅ Your Bundle has been analyzed and the following has been logged: \n
-  `);
-    core.info(`🔥Total Bytes: ${stats.totalBytes}\n`);
-    core.info(`
-    Javascript Resources (Total Bytes - ${stats.jsBundlesAndSizes.totalSize}): \n
-  `);
+    core.info('✅ Your Bundle has been analyzed and the following has been logged:');
+    core.info('🔥Total Bytes: ' + stats.totalBytes);
+    core.info('');
+    core.info('Javascript Resources (Total Bytes - ' + stats.jsBundlesAndSizes.totalSize + ' )');
     for (const jsStats of stats.jsBundlesAndSizes.bundleLogs) {
-        core.info(`
-  ${jsStats}
-  `);
+        core.info(jsStats);
     }
-    core.info('\n');
-    core.info(`
-    Css Resources (Total Bytes - ${stats.cssBundlesAndSizes.totalSize}): \n
-  `);
+    core.info('');
+    core.info(`Css Resources (Total Bytes - ${stats.cssBundlesAndSizes.totalSize}):`);
     for (const cssStats of stats.cssBundlesAndSizes.bundleLogs) {
-        core.info(`
-  ${cssStats}
-  `);
+        core.info(cssStats);
     }
 };
 exports.printTextStats = printTextStats;
