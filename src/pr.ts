@@ -1,19 +1,11 @@
 import {context} from '@actions/github'
 import * as core from '@actions/core'
-import {
-  createBundle,
-  createStats,
-  getRefName,
-  humanFileSize,
-  setStatus
-} from './helpers'
+import {createBundle, createStats, getRefName, humanFileSize} from './helpers'
 import {create} from '@actions/artifact'
 import {ExploreResult} from 'source-map-explorer/lib/types'
 import fs from 'fs'
 
 export const pr = async (): Promise<void> => {
-  const statusIdentifier = 'Bundle Size Compare'
-
   try {
     // Try and find a log to compare it too using the pull request destination
     // get pull request target name:
@@ -21,7 +13,7 @@ export const pr = async (): Promise<void> => {
     const currentBranchName = context.payload.pull_request?.head.ref
 
     core.info(
-      `Pull request branching: ${targetBranchName} -> ${currentBranchName}`
+      `Pull request branching: ${currentBranchName} -> ${targetBranchName}`
     )
 
     if (!targetBranchName) {
@@ -48,13 +40,6 @@ export const pr = async (): Promise<void> => {
     // Read in an input for the path in the case the bundle isn't collected directly in the root.
     const path = core.getInput('path')
 
-    // Sent out a status of pending for bundle stats
-    await setStatus(
-      statusIdentifier,
-      'pending',
-      'Calculating the different in bundle size against target branch..'
-    )
-
     core.debug(`Read in the following path: "${path}"`)
 
     let outcomeBundle: false | ExploreResult
@@ -75,7 +60,7 @@ export const pr = async (): Promise<void> => {
 
     try {
       const foundArtifact = await artifactClient.downloadArtifact(
-        `${targetBranchName}`,
+        targetBranchName,
         './'
       )
 
@@ -87,14 +72,6 @@ export const pr = async (): Promise<void> => {
 
         core.debug(
           '♻️ Set the bundle size without specifying what it was against!'
-        )
-
-        await setStatus(
-          statusIdentifier,
-          'success',
-          `This build was ${
-            createStats(outcomeBundle).totalBytes
-          }) - Couldn't find log to check against..`
         )
       }
 
@@ -115,24 +92,12 @@ export const pr = async (): Promise<void> => {
         currentBundleStats.totalBytesNumber - targetBundleStats.totalBytesNumber
       )
 
-      await setStatus(
-        statusIdentifier,
-        'success',
-        `This pull request resents a change of ${bytesChange}`
-      )
+      core.info(`This pull request resents a change of ${bytesChange}`)
     } catch (e) {
-      core.debug('Trying to find an artifact threw an error..')
-
-      core.debug(
+      core.info(e)
+      core.info('Trying to find an artifact threw an error..')
+      core.info(
         '♻️ Set the bundle size without specifying what it was against!'
-      )
-
-      await setStatus(
-        statusIdentifier,
-        'success',
-        `This build was ${
-          createStats(outcomeBundle).totalBytes
-        }) - Couldn't find log to check against..`
       )
     }
   } catch (error) {

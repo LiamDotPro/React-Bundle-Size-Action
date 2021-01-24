@@ -52,16 +52,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.setStatus = exports.printTextStats = exports.createStats = exports.createBundle = exports.getRefName = exports.humanFileSize = void 0;
+exports.printTextStats = exports.createStats = exports.createBundle = exports.getRefName = exports.humanFileSize = void 0;
 const source_map_explorer_1 = __webpack_require__(7965);
 const core = __importStar(__webpack_require__(2186));
 const enums_1 = __webpack_require__(9275);
-const node_fetch_1 = __importDefault(__webpack_require__(467));
-const child_process_1 = __importDefault(__webpack_require__(3129));
 /**
  * Format bytes as human-readable text.
  *
@@ -185,36 +180,42 @@ const printTextStats = (stats) => {
     core.info('');
 };
 exports.printTextStats = printTextStats;
-const getCurrentCommitSha = () => {
-    return child_process_1.default.execSync(`git rev-parse HEAD`).toString().trim();
-};
-const sha = getCurrentCommitSha();
-/**
- * Sets a custom status
- * @param context
- * @param state
- * @param description
- */
-const setStatus = (context, state, description) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    if (!process.env.GITHUB_REPOSITORY) {
-        return core.error('GITHUB_REPOSITORY not found..');
-    }
-    const [owner, repo] = (_a = process.env.GITHUB_REPOSITORY) === null || _a === void 0 ? void 0 : _a.split('/');
-    yield node_fetch_1.default(`https://api.github.com/repos/${owner}/${repo}/statuses/${sha}`, {
-        method: 'POST',
-        body: JSON.stringify({
-            state,
-            description,
-            context
-        }),
-        headers: {
-            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-            'Content-Type': 'application/json'
-        }
-    });
-});
-exports.setStatus = setStatus;
+// const getCurrentCommitSha = (): string => {
+//   return cp.execSync(`git rev-parse HEAD`).toString().trim()
+// }
+//
+// const sha = getCurrentCommitSha()
+//
+// /**
+//  * Sets a custom status
+//  * @param context
+//  * @param state
+//  * @param description
+//  */
+// export const setStatus = async (
+//   context: string,
+//   state: 'pending' | 'success' | 'failure',
+//   description: string
+// ): Promise<void> => {
+//   if (!process.env.GITHUB_REPOSITORY) {
+//     return core.error('GITHUB_REPOSITORY not found..')
+//   }
+//
+//   const [owner, repo] = process.env.GITHUB_REPOSITORY?.split('/')
+//
+//   await fetch(`https://api.github.com/repos/${owner}/${repo}/statuses/${sha}`, {
+//     method: 'POST',
+//     body: JSON.stringify({
+//       state,
+//       description,
+//       context
+//     }),
+//     headers: {
+//       Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+//       'Content-Type': 'application/json'
+//     }
+//   })
+// }
 
 
 /***/ }),
@@ -330,13 +331,12 @@ const artifact_1 = __webpack_require__(2605);
 const fs_1 = __importDefault(__webpack_require__(5747));
 const pr = () => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
-    const statusIdentifier = 'Bundle Size Compare';
     try {
         // Try and find a log to compare it too using the pull request destination
         // get pull request target name:
         const targetBranchName = (_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.base.ref;
         const currentBranchName = (_b = github_1.context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.head.ref;
-        core.info(`Pull request branching: ${targetBranchName} -> ${currentBranchName}`);
+        core.info(`Pull request branching: ${currentBranchName} -> ${targetBranchName}`);
         if (!targetBranchName) {
             return core.error('The branch could name not be detected, does the target branch name contain invalid chars?');
         }
@@ -350,8 +350,6 @@ const pr = () => __awaiter(void 0, void 0, void 0, function* () {
         }
         // Read in an input for the path in the case the bundle isn't collected directly in the root.
         const path = core.getInput('path');
-        // Sent out a status of pending for bundle stats
-        yield helpers_1.setStatus(statusIdentifier, 'pending', 'Calculating the different in bundle size against target branch..');
         core.debug(`Read in the following path: "${path}"`);
         let outcomeBundle;
         // No path has been specified, lets presume the build is located directly in the root.
@@ -367,13 +365,12 @@ const pr = () => __awaiter(void 0, void 0, void 0, function* () {
         // Create an artifact client to download a different artifact for parsing
         const artifactClient = artifact_1.create();
         try {
-            const foundArtifact = yield artifactClient.downloadArtifact(`${targetBranchName}`, './');
+            const foundArtifact = yield artifactClient.downloadArtifact(targetBranchName, './');
             if (!foundArtifact) {
                 // We couldn't find a corresponding branch name, this may mean that the target branch has never previously been built..
                 // At this point we can just set the output.
                 core.info('Could not download an artifact..');
                 core.debug('♻️ Set the bundle size without specifying what it was against!');
-                yield helpers_1.setStatus(statusIdentifier, 'success', `This build was ${helpers_1.createStats(outcomeBundle).totalBytes}) - Couldn't find log to check against..`);
             }
             const readInStatsFile = yield fs_1.default.promises.readFile(`./${targetBranchName}-react-bundle-logs.json`, { encoding: 'utf8' });
             // Try and read in our downloaded bundle for comparison
@@ -381,12 +378,12 @@ const pr = () => __awaiter(void 0, void 0, void 0, function* () {
             // get stats for our current bundle
             const currentBundleStats = helpers_1.createStats(outcomeBundle);
             const bytesChange = helpers_1.humanFileSize(currentBundleStats.totalBytesNumber - targetBundleStats.totalBytesNumber);
-            yield helpers_1.setStatus(statusIdentifier, 'success', `This pull request resents a change of ${bytesChange}`);
+            core.info(`This pull request resents a change of ${bytesChange}`);
         }
         catch (e) {
-            core.debug('Trying to find an artifact threw an error..');
-            core.debug('♻️ Set the bundle size without specifying what it was against!');
-            yield helpers_1.setStatus(statusIdentifier, 'success', `This build was ${helpers_1.createStats(outcomeBundle).totalBytes}) - Couldn't find log to check against..`);
+            core.info(e);
+            core.info('Trying to find an artifact threw an error..');
+            core.info('♻️ Set the bundle size without specifying what it was against!');
         }
     }
     catch (error) {
@@ -35648,14 +35645,6 @@ module.exports = require("assert");;
 
 "use strict";
 module.exports = require("buffer");;
-
-/***/ }),
-
-/***/ 3129:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("child_process");;
 
 /***/ }),
 

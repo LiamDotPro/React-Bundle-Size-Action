@@ -2,8 +2,6 @@ import {explore} from 'source-map-explorer'
 import {ExploreResult} from 'source-map-explorer/lib/types'
 import * as core from '@actions/core'
 import {SupportedFileEndings} from './enums'
-import fetch from 'node-fetch'
-import cp from 'child_process'
 
 /**
  * Format bytes as human-readable text.
@@ -193,39 +191,39 @@ export const printTextStats = (stats: BundleStats): void => {
   core.info('')
 }
 
-const getCurrentCommitSha = (): string => {
-  return cp.execSync(`git rev-parse HEAD`).toString().trim()
-}
-
-const sha = getCurrentCommitSha()
-
-/**
- * Sets a custom status
- * @param context
- * @param state
- * @param description
- */
-export const setStatus = async (
-  context: string,
-  state: 'pending' | 'success' | 'failure',
-  description: string
-): Promise<void> => {
-  if (!process.env.GITHUB_REPOSITORY) {
-    return core.error('GITHUB_REPOSITORY not found..')
-  }
-
-  const [owner, repo] = process.env.GITHUB_REPOSITORY?.split('/')
-
-  await fetch(`https://api.github.com/repos/${owner}/${repo}/statuses/${sha}`, {
-    method: 'POST',
-    body: JSON.stringify({
-      state,
-      description,
-      context
-    }),
-    headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      'Content-Type': 'application/json'
-    }
-  })
-}
+// const getCurrentCommitSha = (): string => {
+//   return cp.execSync(`git rev-parse HEAD`).toString().trim()
+// }
+//
+// const sha = getCurrentCommitSha()
+//
+// /**
+//  * Sets a custom status
+//  * @param context
+//  * @param state
+//  * @param description
+//  */
+// export const setStatus = async (
+//   context: string,
+//   state: 'pending' | 'success' | 'failure',
+//   description: string
+// ): Promise<void> => {
+//   if (!process.env.GITHUB_REPOSITORY) {
+//     return core.error('GITHUB_REPOSITORY not found..')
+//   }
+//
+//   const [owner, repo] = process.env.GITHUB_REPOSITORY?.split('/')
+//
+//   await fetch(`https://api.github.com/repos/${owner}/${repo}/statuses/${sha}`, {
+//     method: 'POST',
+//     body: JSON.stringify({
+//       state,
+//       description,
+//       context
+//     }),
+//     headers: {
+//       Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+//       'Content-Type': 'application/json'
+//     }
+//   })
+// }
