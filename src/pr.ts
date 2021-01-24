@@ -15,6 +15,18 @@ export const pr = async (): Promise<void> => {
   const statusIdentifier = 'Bundle Size Compare'
 
   try {
+    // Try and find a log to compare it too using the pull request destination
+    // get pull request target name:
+    const targetBranchName = getRefName(context.payload.pull_request?.head.ref)
+
+    core.info(context.payload.pull_request?.head.ref)
+
+    if (!targetBranchName) {
+      return core.error(
+        'The branch could name not be detected, does the target branch name contain invalid chars?'
+      )
+    }
+
     if (!process.env.GITHUB_REF) {
       return core.error(
         'The branch could not be detected, are we running in a CI?'
@@ -57,16 +69,6 @@ export const pr = async (): Promise<void> => {
 
     // Create an artifact client to download a different artifact for parsing
     const artifactClient = create()
-
-    // Try and find a log to compare it too using the pull request destination
-    // get pull request target name:
-    const targetBranchName = getRefName(context.payload.pull_request?.head.ref)
-
-    if (!targetBranchName) {
-      return core.error(
-        'The branch could name not be detected, does the target branch name contain invalid chars?'
-      )
-    }
 
     try {
       const foundArtifact = await artifactClient.downloadArtifact(

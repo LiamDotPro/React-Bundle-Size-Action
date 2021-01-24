@@ -329,9 +329,16 @@ const helpers_1 = __webpack_require__(5008);
 const artifact_1 = __webpack_require__(2605);
 const fs_1 = __importDefault(__webpack_require__(5747));
 const pr = () => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     const statusIdentifier = 'Bundle Size Compare';
     try {
+        // Try and find a log to compare it too using the pull request destination
+        // get pull request target name:
+        const targetBranchName = helpers_1.getRefName((_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.ref);
+        core.info((_b = github_1.context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.head.ref);
+        if (!targetBranchName) {
+            return core.error('The branch could name not be detected, does the target branch name contain invalid chars?');
+        }
         if (!process.env.GITHUB_REF) {
             return core.error('The branch could not be detected, are we running in a CI?');
         }
@@ -358,12 +365,6 @@ const pr = () => __awaiter(void 0, void 0, void 0, function* () {
         }
         // Create an artifact client to download a different artifact for parsing
         const artifactClient = artifact_1.create();
-        // Try and find a log to compare it too using the pull request destination
-        // get pull request target name:
-        const targetBranchName = helpers_1.getRefName((_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.ref);
-        if (!targetBranchName) {
-            return core.error('The branch could name not be detected, does the target branch name contain invalid chars?');
-        }
         try {
             const foundArtifact = yield artifactClient.downloadArtifact(`./${targetBranchName}-react-bundle-logs.json`, './');
             if (!foundArtifact) {
