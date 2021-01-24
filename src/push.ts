@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import {createBundle, getRefName, humanFileSize} from './helpers'
+import {createBundle, createStats, getRefName, printTextStats} from './helpers'
 import {create, UploadOptions} from '@actions/artifact'
 import {ExploreResult} from 'source-map-explorer/lib/types'
 
@@ -37,12 +37,8 @@ export const push = async (): Promise<void> => {
     return core.error(`Couldn't read in the bundle..`)
   }
 
-  // For the moment lets bundle and stringify the output..
-  core.debug(JSON.stringify(outcomeBundle))
-
-  core.debug(
-    `First Bundle Size: ${humanFileSize(outcomeBundle.bundles[0].totalBytes)}`
-  )
+  // Because we have no status to update lets just print out the results.
+  printTextStats(createStats(outcomeBundle))
 
   // Create an artifact client to save current log
   const artifactClient = create()
@@ -53,18 +49,16 @@ export const push = async (): Promise<void> => {
 
   try {
     // Save a current log of what was built
-    const uploadResponse = await artifactClient.uploadArtifact(
+    await artifactClient.uploadArtifact(
       branch,
       [`./${branch}-react-bundle-logs.json`],
       './',
       options
     )
 
-    core.debug(
+    core.info(
       '⭐ A react bundle log for this build has been saved using your branch name!'
     )
-
-    core.debug(JSON.stringify(uploadResponse))
   } catch (e) {
     core.debug(e)
     return core.error(`Something went wrong trying to save the artifact!`)

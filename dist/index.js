@@ -2,6 +2,23 @@ require('./sourcemap-register.js');module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 9275:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SupportedFileEndings = void 0;
+// eslint-disable-next-line no-shadow
+var SupportedFileEndings;
+(function (SupportedFileEndings) {
+    SupportedFileEndings["JS"] = ".js";
+    SupportedFileEndings["CSS"] = ".css";
+})(SupportedFileEndings = exports.SupportedFileEndings || (exports.SupportedFileEndings = {}));
+
+
+/***/ }),
+
 /***/ 5008:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -36,9 +53,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createBundle = exports.getRefName = exports.humanFileSize = void 0;
+exports.printTextStats = exports.createStats = exports.createBundle = exports.getRefName = exports.humanFileSize = void 0;
 const source_map_explorer_1 = __webpack_require__(7965);
 const core = __importStar(__webpack_require__(2186));
+const enums_1 = __webpack_require__(9275);
 /**
  * Format bytes as human-readable text.
  *
@@ -80,6 +98,7 @@ const createBundle = (branch, path = './build/static') => __awaiter(void 0, void
     try {
         core.debug(`concatenated path: ${path}/**/*.js`);
         const createdBundle = yield source_map_explorer_1.explore([`${path}/**/*.js`, `${path}/**/*.css`], {
+            gzip: true,
             output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
         });
         if (createdBundle.bundles.length === 0) {
@@ -93,6 +112,68 @@ const createBundle = (branch, path = './build/static') => __awaiter(void 0, void
     }
 });
 exports.createBundle = createBundle;
+const getTotalBytes = (res) => {
+    let countedBytes = 0;
+    for (const bundle of res.bundles) {
+        countedBytes = countedBytes + bundle.totalBytes;
+    }
+    return exports.humanFileSize(countedBytes, true);
+};
+const getAllOfBundleTypes = (res, endsWith, title) => {
+    const collectedBundles = [];
+    let totalForParticularBundles = 0;
+    for (const bundle of res.bundles) {
+        if (bundle.bundleName.endsWith(endsWith)) {
+            const splitName = bundle.bundleName.split('/');
+            collectedBundles.push({
+                name: splitName[splitName.length - 1],
+                size: exports.humanFileSize(bundle.totalBytes, true)
+            });
+            totalForParticularBundles = totalForParticularBundles + bundle.totalBytes;
+        }
+    }
+    return {
+        title,
+        totalSize: exports.humanFileSize(totalForParticularBundles, true),
+        bundleLogs: collectedBundles.map(el => `${el.name} (${el.size})`)
+    };
+};
+/**
+ * Creates stats using an explore result.
+ * @param res
+ */
+const createStats = (res) => {
+    return {
+        totalBytes: getTotalBytes(res),
+        jsBundlesAndSizes: getAllOfBundleTypes(res, enums_1.SupportedFileEndings.CSS, 'CSS Bundles'),
+        cssBundlesAndSizes: getAllOfBundleTypes(res, enums_1.SupportedFileEndings.JS, 'Javascript Bundles')
+    };
+};
+exports.createStats = createStats;
+const printTextStats = (stats) => {
+    core.info(`
+    ✅ Your Bundle has been analyzed and the following has been logged: \n
+  `);
+    core.info(`🔥Total Bytes: ${stats.totalBytes}\n`);
+    core.info(`
+    Javascript Resources (Total Bytes - ${stats.jsBundlesAndSizes.totalSize}): \n
+  `);
+    for (const jsStats of stats.jsBundlesAndSizes.bundleLogs) {
+        core.info(`
+  ${jsStats}
+  `);
+    }
+    core.info('\n');
+    core.info(`
+    Css Resources (Total Bytes - ${stats.cssBundlesAndSizes.totalSize}): \n
+  `);
+    for (const cssStats of stats.cssBundlesAndSizes.bundleLogs) {
+        core.info(`
+  ${cssStats}
+  `);
+    }
+};
+exports.printTextStats = printTextStats;
 
 
 /***/ }),
@@ -333,9 +414,8 @@ const push = () => __awaiter(void 0, void 0, void 0, function* () {
     if (!outcomeBundle) {
         return core.error(`Couldn't read in the bundle..`);
     }
-    // For the moment lets bundle and stringify the output..
-    core.debug(JSON.stringify(outcomeBundle));
-    core.debug(`First Bundle Size: ${helpers_1.humanFileSize(outcomeBundle.bundles[0].totalBytes)}`);
+    // Because we have no status to update lets just print out the results.
+    helpers_1.printTextStats(helpers_1.createStats(outcomeBundle));
     // Create an artifact client to save current log
     const artifactClient = artifact_1.create();
     const options = {
@@ -343,9 +423,8 @@ const push = () => __awaiter(void 0, void 0, void 0, function* () {
     };
     try {
         // Save a current log of what was built
-        const uploadResponse = yield artifactClient.uploadArtifact(branch, [`./${branch}-react-bundle-logs.json`], './', options);
-        core.debug('⭐ A react bundle log for this build has been saved using your branch name!');
-        core.debug(JSON.stringify(uploadResponse));
+        yield artifactClient.uploadArtifact(branch, [`./${branch}-react-bundle-logs.json`], './', options);
+        core.info('⭐ A react bundle log for this build has been saved using your branch name!');
     }
     catch (e) {
         core.debug(e);
