@@ -17,9 +17,12 @@ export const pr = async (): Promise<void> => {
   try {
     // Try and find a log to compare it too using the pull request destination
     // get pull request target name:
-    const targetBranchName = getRefName(context.payload.pull_request?.head.ref)
+    const targetBranchName = context.payload.pull_request?.base.ref
+    const currentBranchName = context.payload.pull_request?.head.ref
 
-    core.info(context.payload.pull_request?.head.ref)
+    core.info(
+      `Pull request branching: ${targetBranchName} -> ${currentBranchName}`
+    )
 
     if (!targetBranchName) {
       return core.error(
@@ -72,7 +75,7 @@ export const pr = async (): Promise<void> => {
 
     try {
       const foundArtifact = await artifactClient.downloadArtifact(
-        `./${targetBranchName}-react-bundle-logs.json`,
+        `${targetBranchName}`,
         './'
       )
 
@@ -80,8 +83,18 @@ export const pr = async (): Promise<void> => {
         // We couldn't find a corresponding branch name, this may mean that the target branch has never previously been built..
         // At this point we can just set the output.
 
-        return core.debug(
-          '⭐ Set the bundle size without specifying what it was against!'
+        core.info('Could not download an artifact..')
+
+        core.debug(
+          '♻️ Set the bundle size without specifying what it was against!'
+        )
+
+        await setStatus(
+          statusIdentifier,
+          'success',
+          `This build was ${
+            createStats(outcomeBundle).totalBytes
+          }) - Couldn't find log to check against..`
         )
       }
 

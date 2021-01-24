@@ -334,8 +334,9 @@ const pr = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Try and find a log to compare it too using the pull request destination
         // get pull request target name:
-        const targetBranchName = helpers_1.getRefName((_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.ref);
-        core.info((_b = github_1.context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.head.ref);
+        const targetBranchName = (_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.base.ref;
+        const currentBranchName = (_b = github_1.context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.head.ref;
+        core.info(`Pull request branching: ${targetBranchName} -> ${currentBranchName}`);
         if (!targetBranchName) {
             return core.error('The branch could name not be detected, does the target branch name contain invalid chars?');
         }
@@ -366,11 +367,13 @@ const pr = () => __awaiter(void 0, void 0, void 0, function* () {
         // Create an artifact client to download a different artifact for parsing
         const artifactClient = artifact_1.create();
         try {
-            const foundArtifact = yield artifactClient.downloadArtifact(`./${targetBranchName}-react-bundle-logs.json`, './');
+            const foundArtifact = yield artifactClient.downloadArtifact(`${targetBranchName}`, './');
             if (!foundArtifact) {
                 // We couldn't find a corresponding branch name, this may mean that the target branch has never previously been built..
                 // At this point we can just set the output.
-                return core.debug('⭐ Set the bundle size without specifying what it was against!');
+                core.info('Could not download an artifact..');
+                core.debug('♻️ Set the bundle size without specifying what it was against!');
+                yield helpers_1.setStatus(statusIdentifier, 'success', `This build was ${helpers_1.createStats(outcomeBundle).totalBytes}) - Couldn't find log to check against..`);
             }
             const readInStatsFile = yield fs_1.default.promises.readFile(`./${targetBranchName}-react-bundle-logs.json`, { encoding: 'utf8' });
             // Try and read in our downloaded bundle for comparison
