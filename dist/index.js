@@ -94,6 +94,11 @@ const getRefName = (ref) => {
     return ref ? ref.split('/').slice(2).join('/') : null;
 };
 exports.getRefName = getRefName;
+/**
+ * Attempts to create a bundle using the path of the build contents.
+ * @param branch
+ * @param path
+ */
 const createBundle = (branch, path = './build/static') => __awaiter(void 0, void 0, void 0, function* () {
     try {
         core.debug(`concatenated path: ${path}/**/*.js`);
@@ -112,6 +117,10 @@ const createBundle = (branch, path = './build/static') => __awaiter(void 0, void
     }
 });
 exports.createBundle = createBundle;
+/**
+ * Gets the total amount of bytes from an explore result.
+ * @param res
+ */
 const getTotalBytes = (res) => {
     let countedBytes = 0;
     for (const bundle of res.bundles) {
@@ -152,14 +161,16 @@ const createStats = (res) => {
 exports.createStats = createStats;
 const printTextStats = (stats) => {
     core.info('✅ Your Bundle has been analyzed and the following has been logged:');
-    core.info('🔥Total Bytes: ' + stats.totalBytes);
+    core.info('🔥 Total Bytes: ' + stats.totalBytes);
     core.info('');
-    core.info('Javascript Resources (Total Bytes - ' + stats.jsBundlesAndSizes.totalSize + ' )');
+    core.info('🛠️ Javascript Resources (Total Bytes - ' +
+        stats.jsBundlesAndSizes.totalSize +
+        '):');
     for (const jsStats of stats.jsBundlesAndSizes.bundleLogs) {
         core.info(jsStats);
     }
     core.info('');
-    core.info(`Css Resources (Total Bytes - ${stats.cssBundlesAndSizes.totalSize}):`);
+    core.info('🎨 CSS Resources (Total Bytes - ' + stats.cssBundlesAndSizes.totalSize + '):');
     for (const cssStats of stats.cssBundlesAndSizes.bundleLogs) {
         core.info(cssStats);
     }

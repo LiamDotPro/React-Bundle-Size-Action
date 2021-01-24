@@ -46,6 +46,11 @@ export const getRefName = (ref: string): string | null => {
   return ref ? ref.split('/').slice(2).join('/') : null
 }
 
+/**
+ * Attempts to create a bundle using the path of the build contents.
+ * @param branch
+ * @param path
+ */
 export const createBundle = async (
   branch: string,
   path = './build/static'
@@ -73,6 +78,10 @@ export const createBundle = async (
   }
 }
 
+/**
+ * Gets the total amount of bytes from an explore result.
+ * @param res
+ */
 const getTotalBytes = (res: ExploreResult): string => {
   let countedBytes = 0
 
@@ -151,12 +160,12 @@ export const printTextStats = (stats: BundleStats): void => {
   core.info(
     '✅ Your Bundle has been analyzed and the following has been logged:'
   )
-  core.info('🔥Total Bytes: ' + stats.totalBytes)
+  core.info('🔥 Total Bytes: ' + stats.totalBytes)
   core.info('')
   core.info(
-    'Javascript Resources (Total Bytes - ' +
+    '🛠️ Javascript Resources (Total Bytes - ' +
       stats.jsBundlesAndSizes.totalSize +
-      ' )'
+      '):'
   )
 
   for (const jsStats of stats.jsBundlesAndSizes.bundleLogs) {
@@ -166,8 +175,11 @@ export const printTextStats = (stats: BundleStats): void => {
   core.info('')
 
   core.info(
-    `Css Resources (Total Bytes - ${stats.cssBundlesAndSizes.totalSize}):`
+    '🎨 CSS Resources (Total Bytes - ' +
+      stats.cssBundlesAndSizes.totalSize +
+      '):'
   )
+
   for (const cssStats of stats.cssBundlesAndSizes.bundleLogs) {
     core.info(cssStats)
   }
