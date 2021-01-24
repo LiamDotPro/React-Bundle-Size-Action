@@ -159,6 +159,8 @@ export const printTextStats = (stats: BundleStats): void => {
     core.info(jsStats)
   }
 
+  core.info('')
+
   core.info(
     `Css Resources (Total Bytes - ${stats.cssBundlesAndSizes.totalSize}):`
   )
