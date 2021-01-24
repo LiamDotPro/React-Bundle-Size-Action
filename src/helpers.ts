@@ -2,6 +2,8 @@ import {explore} from 'source-map-explorer'
 import {ExploreResult} from 'source-map-explorer/lib/types'
 import * as core from '@actions/core'
 import {SupportedFileEndings} from './enums'
+import fetch from 'node-fetch'
+import cp from 'child_process'
 
 /**
  * Format bytes as human-readable text.
@@ -82,14 +84,16 @@ export const createBundle = async (
  * Gets the total amount of bytes from an explore result.
  * @param res
  */
-const getTotalBytes = (res: ExploreResult): string => {
+const getTotalBytes = (
+  res: ExploreResult
+): {readable: string; unreadable: number} => {
   let countedBytes = 0
 
   for (const bundle of res.bundles) {
     countedBytes = countedBytes + bundle.totalBytes
   }
 
-  return humanFileSize(countedBytes, true)
+  return {readable: humanFileSize(countedBytes, true), unreadable: countedBytes}
 }
 
 interface parsedBundleOutput {
@@ -132,6 +136,7 @@ const getAllOfBundleTypes = (
 
 interface BundleStats {
   totalBytes: string
+  totalBytesNumber: number
   jsBundlesAndSizes: parsedBundleOutput
   cssBundlesAndSizes: parsedBundleOutput
 }
@@ -142,7 +147,8 @@ interface BundleStats {
  */
 export const createStats = (res: ExploreResult): BundleStats => {
   return {
-    totalBytes: getTotalBytes(res),
+    totalBytes: getTotalBytes(res).readable,
+    totalBytesNumber: getTotalBytes(res).unreadable,
     cssBundlesAndSizes: getAllOfBundleTypes(
       res,
       SupportedFileEndings.CSS,
@@ -183,4 +189,43 @@ export const printTextStats = (stats: BundleStats): void => {
   for (const cssStats of stats.cssBundlesAndSizes.bundleLogs) {
     core.info(cssStats)
   }
+
+  core.info('')
+}
+
+const getCurrentCommitSha = (): string => {
+  return cp.execSync(`git rev-parse HEAD`).toString().trim()
+}
+
+const sha = getCurrentCommitSha()
+
+/**
+ * Sets a custom status
+ * @param context
+ * @param state
+ * @param description
+ */
+export const setStatus = async (
+  context: string,
+  state: 'pending' | 'success' | 'failure',
+  description: string
+): Promise<void> => {
+  if (!process.env.GITHUB_REPOSITORY) {
+    return core.error('GITHUB_REPOSITORY not found..')
+  }
+
+  const [owner, repo] = process.env.GITHUB_REPOSITORY?.split('/')
+
+  await fetch(`https://api.github.com/repos/${owner}/${repo}/statuses/${sha}`, {
+    method: 'POST',
+    body: JSON.stringify({
+      state,
+      description,
+      context
+    }),
+    headers: {
+      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+      'Content-Type': 'application/json'
+    }
+  })
 }

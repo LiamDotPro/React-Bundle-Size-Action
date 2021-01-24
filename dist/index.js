@@ -52,11 +52,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.printTextStats = exports.createStats = exports.createBundle = exports.getRefName = exports.humanFileSize = void 0;
+exports.setStatus = exports.printTextStats = exports.createStats = exports.createBundle = exports.getRefName = exports.humanFileSize = void 0;
 const source_map_explorer_1 = __webpack_require__(7965);
 const core = __importStar(__webpack_require__(2186));
 const enums_1 = __webpack_require__(9275);
+const node_fetch_1 = __importDefault(__webpack_require__(467));
+const child_process_1 = __importDefault(__webpack_require__(3129));
 /**
  * Format bytes as human-readable text.
  *
@@ -126,7 +131,7 @@ const getTotalBytes = (res) => {
     for (const bundle of res.bundles) {
         countedBytes = countedBytes + bundle.totalBytes;
     }
-    return exports.humanFileSize(countedBytes, true);
+    return { readable: exports.humanFileSize(countedBytes, true), unreadable: countedBytes };
 };
 const getAllOfBundleTypes = (res, endsWith, title) => {
     const collectedBundles = [];
@@ -153,7 +158,8 @@ const getAllOfBundleTypes = (res, endsWith, title) => {
  */
 const createStats = (res) => {
     return {
-        totalBytes: getTotalBytes(res),
+        totalBytes: getTotalBytes(res).readable,
+        totalBytesNumber: getTotalBytes(res).unreadable,
         cssBundlesAndSizes: getAllOfBundleTypes(res, enums_1.SupportedFileEndings.CSS, 'CSS Bundles'),
         jsBundlesAndSizes: getAllOfBundleTypes(res, enums_1.SupportedFileEndings.JS, 'Javascript Bundles')
     };
@@ -170,12 +176,45 @@ const printTextStats = (stats) => {
         core.info(jsStats);
     }
     core.info('');
-    core.info('🎨 CSS Resources (Total Bytes - ' + stats.cssBundlesAndSizes.totalSize + '):');
+    core.info('🎨 CSS Resources (Total Bytes - ' +
+        stats.cssBundlesAndSizes.totalSize +
+        '):');
     for (const cssStats of stats.cssBundlesAndSizes.bundleLogs) {
         core.info(cssStats);
     }
+    core.info('');
 };
 exports.printTextStats = printTextStats;
+const getCurrentCommitSha = () => {
+    return child_process_1.default.execSync(`git rev-parse HEAD`).toString().trim();
+};
+const sha = getCurrentCommitSha();
+/**
+ * Sets a custom status
+ * @param context
+ * @param state
+ * @param description
+ */
+const setStatus = (context, state, description) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    if (!process.env.GITHUB_REPOSITORY) {
+        return core.error('GITHUB_REPOSITORY not found..');
+    }
+    const [owner, repo] = (_a = process.env.GITHUB_REPOSITORY) === null || _a === void 0 ? void 0 : _a.split('/');
+    yield node_fetch_1.default(`https://api.github.com/repos/${owner}/${repo}/statuses/${sha}`, {
+        method: 'POST',
+        body: JSON.stringify({
+            state,
+            description,
+            context
+        }),
+        headers: {
+            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+            'Content-Type': 'application/json'
+        }
+    });
+});
+exports.setStatus = setStatus;
 
 
 /***/ }),
@@ -279,15 +318,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.pr = void 0;
 const github_1 = __webpack_require__(5438);
 const core = __importStar(__webpack_require__(2186));
 const helpers_1 = __webpack_require__(5008);
-const source_map_explorer_1 = __webpack_require__(7965);
 const artifact_1 = __webpack_require__(2605);
+const fs_1 = __importDefault(__webpack_require__(5747));
 const pr = () => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
+    const statusIdentifier = 'Bundle Size Compare';
     try {
         if (!process.env.GITHUB_REF) {
             return core.error('The branch could not be detected, are we running in a CI?');
@@ -299,33 +342,22 @@ const pr = () => __awaiter(void 0, void 0, void 0, function* () {
         }
         // Read in an input for the path in the case the bundle isn't collected directly in the root.
         const path = core.getInput('path');
+        // Sent out a status of pending for bundle stats
+        yield helpers_1.setStatus(statusIdentifier, 'pending', 'Calculating the different in bundle size against target branch..');
+        core.debug(`Read in the following path: "${path}"`);
+        let outcomeBundle;
         // No path has been specified, lets presume the build is located directly in the root.
         if (!path) {
-            const outcomeBundle = yield source_map_explorer_1.explore('./build/static/**/*.(js|css)', {
-                output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
-            });
-            if (outcomeBundle.bundles.length === 0) {
-                return core.error('The build output folder did not contain any files');
-            }
+            outcomeBundle = yield helpers_1.createBundle(branch);
         }
         else {
-            const outcomeBundle = yield source_map_explorer_1.explore(`${path}/build/static/**/*.(js|css)`, {
-                output: { format: 'json', filename: `${branch}-react-bundle-logs.json` }
-            });
-            if (outcomeBundle.bundles.length === 0) {
-                return core.error('The build output folder did not contain any files');
-            }
+            outcomeBundle = yield helpers_1.createBundle(branch, path);
         }
-        // Create an artifact client to save current log
+        if (!outcomeBundle) {
+            return core.error(`Couldn't read in the bundle..`);
+        }
+        // Create an artifact client to download a different artifact for parsing
         const artifactClient = artifact_1.create();
-        const options = {
-            continueOnError: false
-        };
-        // Save a current log of what was built
-        const uploadResponse = yield artifactClient.uploadArtifact(branch, [`./${branch}-react-bundle-logs.json`], './', options);
-        if (uploadResponse) {
-            core.debug('⭐ A react bundle log for this build has been saved using your branch name!');
-        }
         // Try and find a log to compare it too using the pull request destination
         // get pull request target name:
         const targetBranchName = helpers_1.getRefName((_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.head.ref);
@@ -333,16 +365,24 @@ const pr = () => __awaiter(void 0, void 0, void 0, function* () {
             return core.error('The branch could name not be detected, does the target branch name contain invalid chars?');
         }
         try {
-            const foundArtifact = yield artifactClient.downloadArtifact(`./${targetBranchName}-react-bundle-logs.json`);
+            const foundArtifact = yield artifactClient.downloadArtifact(`./${targetBranchName}-react-bundle-logs.json`, './');
             if (!foundArtifact) {
                 // We couldn't find a corresponding branch name, this may mean that the target branch has never previously been built..
                 // At this point we can just set the output.
                 return core.debug('⭐ Set the bundle size without specifying what it was against!');
             }
+            const readInStatsFile = yield fs_1.default.promises.readFile(`./${targetBranchName}-react-bundle-logs.json`, { encoding: 'utf8' });
+            // Try and read in our downloaded bundle for comparison
+            const targetBundleStats = helpers_1.createStats(JSON.parse(readInStatsFile));
+            // get stats for our current bundle
+            const currentBundleStats = helpers_1.createStats(outcomeBundle);
+            const bytesChange = helpers_1.humanFileSize(currentBundleStats.totalBytesNumber - targetBundleStats.totalBytesNumber);
+            yield helpers_1.setStatus(statusIdentifier, 'success', `This pull request resents a change of ${bytesChange}`);
         }
         catch (e) {
             core.debug('Trying to find an artifact threw an error..');
-            return core.debug('⭐ Set the bundle size without specifying what it was against!');
+            core.debug('♻️ Set the bundle size without specifying what it was against!');
+            yield helpers_1.setStatus(statusIdentifier, 'success', `This build was ${helpers_1.createStats(outcomeBundle).totalBytes}) - Couldn't find log to check against..`);
         }
     }
     catch (error) {
@@ -35604,6 +35644,14 @@ module.exports = require("assert");;
 
 "use strict";
 module.exports = require("buffer");;
+
+/***/ }),
+
+/***/ 3129:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("child_process");;
 
 /***/ }),
 
